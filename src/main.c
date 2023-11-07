@@ -33,6 +33,7 @@ enum {
 
 struct XGRID {
   bool bomb;
+  bool selected;
 };
 
 struct YGRID {
@@ -144,6 +145,14 @@ bombsurroundcount(TTY * tty, int y, int x)
   return count;
 }
 
+/*
+ * A horribly long function which goes through all the grid
+ * It scans each char surrounding the selected char
+ * If the chars a bomb then it will return EXIT_FAILURE, 
+ * And should be handled from there,
+ * Otherwise it will put any chars that have 0 bombs surrounding it,
+ * With a # char, otherwise it will print the count to the screen
+ */
 int
 selecthandle(TTY * tty)
 {
@@ -163,35 +172,99 @@ selecthandle(TTY * tty)
     /*
      * Go down the grid
      */
-    for (y = tty->cury, x = tty->curx; y > 0 && y < GRID_SIZE; y++) {
-      if ((count = bombsurroundcount(tty, y, x)) > 0) {
-        mvwprintw(tty->win, y, x, "%d", count);
-        break;
+     for (y = tty->cury; y < (GRID_SIZE - 1); y++) {
+        for (x = tty->curx; x > 0;) {
+          if (tty->ygrd[y].xgrd[x].selected)
+            break; /* Do nothing if its already been selected */
+
+          else if (tty->ygrd[y].xgrd[x].bomb)
+            break; /* Do nothing if its a bomb */
+
+          else if ((count = bombsurroundcount(tty, y, x)) > 0) {
+            tty->ygrd[y].xgrd[x].selected = true;
+            mvwprintw(tty->win, y, x, "%d", count);
+            break;
+          }
+
+          else {
+            tty->ygrd[y].xgrd[x].selected = true;
+            mvwprintw(tty->win, y, x, "#"); 
+
+            if (x > 0)
+              x--;
+           }
+         }
+
+        for (x = tty->curx; x < (GRID_SIZE - 1);) {
+          if (tty->ygrd[y].xgrd[x].selected)
+            break; /* Do nothing if its already been selected */
+
+          else if (tty->ygrd[y].xgrd[x].bomb)
+            break; /* Do nothing if its a bomb */
+
+          else if ((count = bombsurroundcount(tty, y, x)) > 0) {
+            tty->ygrd[y].xgrd[x].selected = true;
+            mvwprintw(tty->win, y, x, "%d", count);
+            break;
+          }
+
+          else {
+            tty->ygrd[y].xgrd[x].selected = true;
+            mvwprintw(tty->win, y, x, "#"); 
+            if (x < (GRID_SIZE - 1))
+              x++;
+          }
+        }
       }
 
-      else {
-        mvwprintw(tty->win, y, x, "#"); 
-        if (x < GRID_SIZE - 1)
-         x++;
-      }
+    /*
+     * Go up the grid
+     */
+    for (y = tty->cury; y > 0; y--) {
+      for (x = tty->curx; x > 0;) {
+         if (tty->ygrd[y].xgrd[x].selected)
+           break; /* Do nothing if its already been selected */
+
+         else if (tty->ygrd[y].xgrd[x].bomb)
+           break; /* Do nothing if its a bomb */
+
+         else if ((count = bombsurroundcount(tty, y, x)) > 0) {
+           tty->ygrd[y].xgrd[x].selected = true;
+           mvwprintw(tty->win, y, x, "%d", count);
+           break;
+         }
+
+         else {
+          tty->ygrd[y].xgrd[x].selected = true;
+          mvwprintw(tty->win, y, x, "#"); 
+
+          if (x > 0)
+             x--;
+         }
     }
 
-      /*
-       * Go up the grid
-       */
-      for (y = tty->cury, x = tty->curx; y > 0 && y < GRID_SIZE; y--) {
-        if ((count = bombsurroundcount(tty, y, x)) > 0) {
-          mvwprintw(tty->win, y, x, "%d", count);
-          break;
-        }
+      for (x = tty->curx; x < (GRID_SIZE - 1);) {
+         if (tty->ygrd[y].xgrd[x].selected)
+            break; /* Do nothing if its already been selected */
 
-        else {
-          mvwprintw(tty->win, y, x, "#"); 
-          if (x < GRID_SIZE - 1)
-            x++;
-        }
+         else if (tty->ygrd[y].xgrd[x].bomb)
+            break; /* Do nothing if its a bomb */
 
+         else if ((count = bombsurroundcount(tty, y, x)) > 0) {
+            mvwprintw(tty->win, y, x, "%d", count);
+            tty->ygrd[y].xgrd[x].selected = true;
+            break;
+         }
+
+         else {
+            tty->ygrd[y].xgrd[x].selected = true;
+            mvwprintw(tty->win, y, x, "#"); 
+
+            if (x < (GRID_SIZE - 1))
+               x++;
+        }
       }
+   }
 
     wrefresh(tty->win);
   }
@@ -245,17 +318,16 @@ drawgrid(TTY * tty)
    */
   for (y = 0; y < GRID_SIZE; y++) {
     for (x = 0; x < GRID_SIZE; x++) {
-      /*mvwprintw(tty->win, y, x, "~");*/
+      mvwprintw(tty->win, y, x, "~");
       if (((float)rand()/RAND_MAX) < 0.5 && bombc < BOMB_COUNT) {
-        mvwprintw(tty->win, y, x, "*");
         tty->ygrd[y].xgrd[x].bomb = true;
         bombc++;
       }
 
-      else {
-        mvwprintw(tty->win, y, x, "~");
+      else
         tty->ygrd[y].xgrd[x].bomb = false;
-      }
+
+      tty->ygrd[y].xgrd[x].selected = false;
     }
   }
 
