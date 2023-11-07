@@ -1,9 +1,10 @@
+#include <stdbool.h>
 #include <stdlib.h>
 #include <curses.h>
-#include <stdbool.h>
 #include <string.h>
 #include <stdio.h>
 #include <errno.h>
+#include <time.h>
 #include <err.h>
 
 /*
@@ -21,7 +22,8 @@ enum {
   MIN_TTY_X = 80,
   GM_WIN_Y = 24,
   GM_WIN_X = 80,
-  GRID_SIZE = 24
+  GRID_SIZE = 24,
+  BOMB_COUNT = 99 
 };
 
 enum {
@@ -29,11 +31,20 @@ enum {
   RET = 10
 };
 
+struct XGRID {
+  bool bomb;
+};
+
+struct YGRID {
+  struct XGRID xgrd[GRID_SIZE];
+};
+
 typedef struct {
   int maxx;
   int maxy;
   int cury;
   int curx;
+  struct YGRID ygrd[GRID_SIZE];
   WINDOW * win;
 }TTY;
 
@@ -95,42 +106,157 @@ moveright(TTY * tty)
   wrefresh(tty->win);
 }
 
-void
+/*
+ * 8 if statments to see if the 8 surrounding blocks
+ * are bombs, if they are bombs the count is incremented by 1
+ * the count is printed to the current cursor position
+ * The count is returned by the function
+ */
+int
+bombsurroundcount(TTY * tty, int y, int x)
+{
+  int count = 0;
+
+  if (tty->ygrd[y].xgrd[x+1].bomb)
+    count++;
+
+  if (tty->ygrd[y].xgrd[x-1].bomb)
+    count++;
+
+  if (tty->ygrd[y+1].xgrd[x].bomb)
+    count++;
+
+  if (tty->ygrd[y+1].xgrd[x+1].bomb)
+    count++;
+
+  if (tty->ygrd[y+1].xgrd[x-1].bomb)
+    count++;
+
+  if (tty->ygrd[y-1].xgrd[x].bomb)
+    count++;
+
+  if (tty->ygrd[y-1].xgrd[x+1].bomb)
+    count++;
+
+  if (tty->ygrd[y-1].xgrd[x-1].bomb)
+    count++;
+
+  return count;
+}
+
+int
+selecthandle(TTY * tty)
+{
+  int y, x;
+  int count = 0;
+
+  /* If the user selects a bomb */
+  if (tty->ygrd[tty->cury].xgrd[tty->curx].bomb) {
+    mvwprintw(tty->win, GM_WIN_Y/2, GM_WIN_X/2, "BOOM!!!!!!");
+    mvwprintw(tty->win, tty->cury, tty->curx, "*");
+    wrefresh(tty->win);
+    wgetch(tty->win);
+    return EXIT_FAILURE;
+  }
+
+  else { 
+    /*
+     * Go down the grid
+     */
+    for (y = tty->cury, x = tty->curx; y > 0 && y < GRID_SIZE; y++) {
+      if ((count = bombsurroundcount(tty, y, x)) > 0) {
+        mvwprintw(tty->win, y, x, "%d", count);
+        break;
+      }
+
+      else {
+        mvwprintw(tty->win, y, x, "#"); 
+        if (x < GRID_SIZE - 1)
+         x++;
+      }
+    }
+
+      /*
+       * Go up the grid
+       */
+      for (y = tty->cury, x = tty->curx; y > 0 && y < GRID_SIZE; y--) {
+        if ((count = bombsurroundcount(tty, y, x)) > 0) {
+          mvwprintw(tty->win, y, x, "%d", count);
+          break;
+        }
+
+        else {
+          mvwprintw(tty->win, y, x, "#"); 
+          if (x < GRID_SIZE - 1)
+            x++;
+        }
+
+      }
+
+    wrefresh(tty->win);
+  }
+
+  return EXIT_SUCCESS;
+}
+
+int
 parsekey(TTY * tty, int c)
 {
   switch (c) {
     case KEY_UP:
     case 'k':
       moveup(tty);
-      break;
+      return EXIT_SUCCESS;
     case KEY_DOWN:
     case 'j':
       movedown(tty);
-      break;
+      return EXIT_SUCCESS;
     case KEY_LEFT:
     case 'h':
       moveleft(tty);
-      break;
+      return EXIT_SUCCESS;
     case KEY_RIGHT:
     case 'l':
       moveright(tty);
-      break;
+      return EXIT_SUCCESS;
+    case RET:
+    case 'e':
+      return selecthandle(tty);
   }
+
+  return EXIT_SUCCESS;
 }
 
 int
 drawgrid(TTY * tty)
 {
   int y, x;
+  int bombc = 0;
+
+  srand(time(0));
 
   if (wbkgd(tty->win, COLOR_PAIR(WIN_BOX))) {
     fprintf(stderr, "(drawgrid) Couldnt set background color\n");
     return EXIT_FAILURE;
   }
 
+  /*
+   * Draws the grid and randomly genrates bombs
+   */
   for (y = 0; y < GRID_SIZE; y++) {
-    for (x = 0; x < GRID_SIZE; x++) 
-      mvwprintw(tty->win, y, x, "~");
+    for (x = 0; x < GRID_SIZE; x++) {
+      /*mvwprintw(tty->win, y, x, "~");*/
+      if (((float)rand()/RAND_MAX) < 0.5 && bombc < BOMB_COUNT) {
+        mvwprintw(tty->win, y, x, "*");
+        tty->ygrd[y].xgrd[x].bomb = true;
+        bombc++;
+      }
+
+      else {
+        mvwprintw(tty->win, y, x, "~");
+        tty->ygrd[y].xgrd[x].bomb = false;
+      }
+    }
   }
 
   tty->cury = tty->curx = GRID_SIZE/2;
@@ -148,7 +274,8 @@ eventloop(TTY * tty)
     return;
 
   while ((c = wgetch(tty->win)) != ESC) {
-    parsekey(tty, c);
+    if (parsekey(tty, c))
+      break;
   }
 
   if (wclear(tty->win) == ERR) {
