@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <string.h>
 #include <time.h>
 
@@ -20,10 +21,8 @@ enum {
  * Some dimensions for the screen
  */
 enum {
-	MIN_TTY_Y = 24,
-	MIN_TTY_X = 80,
-	GM_WIN_Y = 24,
-	GM_WIN_X = 80,
+	WIN_Y = 24,
+	WIN_X = 80,
 	GRID_Y = 16,
 	GRID_X = 30,
 	BOMB_COUNT = 99
@@ -62,7 +61,7 @@ typedef struct {
 	int curx;
 	struct YGRID ygrd[GRID_Y];
 	WINDOW *win;
-}      TTY;
+} TTY;
 
 int mainmenu(TTY *);
 
@@ -73,13 +72,37 @@ resizecheck(TTY * tty)
 
 	getmaxyx(tty->win, y, x);
 
-	if (y < MIN_TTY_Y || x < MIN_TTY_X)
+	if (y < WIN_Y || x < WIN_X)
 		err(EXIT_FAILURE, "TTY too small to function");
 
 	if (y != tty->maxy || x != tty->maxy)
 		return true;
 
 	return false;
+}
+
+void
+mslog(const char *format,...)
+{
+	FILE *fp;
+	va_list args;
+
+	fp = fopen("mserrlog.txt", "w");
+
+	va_start(args, format);
+
+	if (!fp) {
+		fprintf(stderr, "Failed to open log file:%s\n", strerror(errno));
+		return;
+	}
+	vfprintf(stderr, format, args);
+	vfprintf(fp, format, args);
+	fprintf(fp, "\n");
+
+	if (fclose(fp)) {
+		fprintf(stderr, "%s\n", strerror(errno));
+		return;
+	}
 }
 
 void
@@ -165,9 +188,7 @@ scanxgrid(TTY * tty, int y, int min, bool inc)
 	int x;
 	int count = 0;
 
-	/*
-   * Go along the X axis <- this way
-   */
+	/* Go along the X axis <- this way */
 	for (x = tty->curx; x != min;) {
 		if (tty->ygrd[y].xgrd[x].selected)
 			break;	/* Do nothing if its already been selected */
@@ -203,14 +224,10 @@ scanygrid(TTY * tty, int min, bool inc)
 	int y;
 
 	for (y = tty->cury; y != min;) {
-		/*
-     * Go along the X axis <- this way
-     */
+		/* Go along the X axis <- this way */
 		scanxgrid(tty, y, 0, false);
 
-		/*
-     * Go along the X axis -> this way
-     */
+		/* Go along the X axis -> this way */
 		scanxgrid(tty, y, GRID_X, true);
 
 		if (inc)
@@ -228,20 +245,16 @@ selecthandle(TTY * tty)
 {
 	/* If the user selects a bomb */
 	if (tty->ygrd[tty->cury].xgrd[tty->curx].bomb) {
-		mvwprintw(tty->win, GM_WIN_Y / 2, GM_WIN_X / 2, "BOOM!!!!!!");
+		mvwprintw(tty->win, WIN_Y / 2, WIN_X / 2, "BOOM!!!!!!");
 		mvwprintw(tty->win, tty->cury, tty->curx, "*");
 		wrefresh(tty->win);
 		wgetch(tty->win);
 		return EXIT_FAILURE;
 	} else {
-		/*
-     * Go down the grid
-     */
+		/* Go down the grid */
 		scanygrid(tty, GRID_Y, true);
 
-		/*
-     * Go up the grid
-	   */
+		/* Go up the grid */
 		scanygrid(tty, 0, false);
 
 		wrefresh(tty->win);
@@ -260,9 +273,7 @@ flaghandle(TTY * tty)
 		wrefresh(tty->win);
 		tty->ygrd[tty->cury].xgrd[tty->curx].flagged = true;
 	}
-	/*
-   * If the sqaure is already flagged do nothing
-   */
+	 /* If the sqaure is already flagged do nothing */ 
 	else
 		return EXIT_SUCCESS;
 
@@ -273,8 +284,8 @@ int
 parsekey(TTY * tty, int c)
 {
 	switch (c) {
-		case KEY_UP:
-		case 'k':
+	case KEY_UP:
+	case 'k':
 		moveup(tty);
 		return EXIT_SUCCESS;
 	case KEY_DOWN:
@@ -312,13 +323,14 @@ drawgrid(TTY * tty)
 
 	srand(time(0));
 
-	if (wbkgd(tty->win, COLOR_PAIR(WIN_BOX))) {
-		fprintf(stderr, "(drawgrid) Couldnt set background color\n");
-		return EXIT_FAILURE;
+	if (has_colors()) {
+		if (wbkgd(tty->win, COLOR_PAIR(WIN_BOX))) {
+			mslog("Failed to set background color");
+			return EXIT_FAILURE;
+		}
 	}
-	/*
-   * Draws the grid and randomly genrates bombs
-   */
+
+	/* Draws the grid and randomly genrates bombs */
 	for (y = 0; y < GRID_Y; y++) {
 		for (x = 0; x < GRID_X; x++) {
 			mvwprintw(tty->win, y, x, "#");
@@ -328,12 +340,10 @@ drawgrid(TTY * tty)
 		}
 	}
 
-	/*
-         * Set the bombs, using y as a counter
-         */
+	/* Set the bombs, using y as a counter */
 	for (y = 0; y < BOMB_COUNT; y++) {
-		yrand = (int) rand() % GRID_Y;
-		xrand = (int) rand() % GRID_X;
+		yrand = (int)rand() % GRID_Y;
+		xrand = (int)rand() % GRID_X;
 		tty->ygrd[yrand].xgrd[xrand].bomb = true;
 		mvwprintw(tty->win, yrand, xrand, "B");
 	}
@@ -364,7 +374,7 @@ eventloop(TTY * tty)
 	}
 
 	if (wclear(tty->win) == ERR) {
-		fprintf(stderr, "(mainmenu) Couldnt clear window\n");
+		mslog("Failed to clear window");
 		return;
 	}
 	mainmenu(tty);
@@ -383,24 +393,21 @@ ttyinit(void)
 		return (TTY *) NULL;
 
 	if (!(stdscr = initscr())) {
-		fprintf(stderr, "(ttyinit) Couldnt init screen\n");
+		mslog("Failed to init curses");
 		return (TTY *) NULL;
 	}
 	getmaxyx(stdscr, tmp->maxy, tmp->maxx);
 
-	if (tmp->maxy < MIN_TTY_Y || tmp->maxx < MIN_TTY_X) {
-		fprintf(stderr, "(ttyinit) TTY too small to function\n");
+	if (tmp->maxy < WIN_Y || tmp->maxx < WIN_X) {
+		mslog("TTY to small to function, need at least 80x24");
 		return (TTY *) NULL;
 	}
-	/*
-   * Should print the new window
-   * in the center of the screen
-   */
+	/* Should print the new window in the center of the screen */
 	if (!(tmp->win
-		= newwin(GM_WIN_Y, GM_WIN_X, (tmp->maxy / 2) - (GM_WIN_Y / 2),
-		    (tmp->maxx / 2) - (GM_WIN_X / 2)))) {
+	    = newwin(WIN_Y, WIN_X, (tmp->maxy / 2) - (WIN_Y / 2),
+	    (tmp->maxx / 2) - (WIN_X / 2)))) {
 
-		fprintf(stderr, "(ttyinit) Failed to create window\n");
+		mslog("Failed to create window");
 		return (TTY *) NULL;
 	}
 	return tmp;
@@ -412,11 +419,11 @@ int
 ttydestroy(TTY * tty)
 {
 	if (endwin() == ERR) {
-		fprintf(stderr, "(ttydestroy) Couldnt end curses\n");
+		mslog("Failed to end curses session");
 		return EXIT_FAILURE;
 	}
 	if (!tty) {
-		fprintf(stderr, "(ttydestory) TTY * is not NULL\n");
+		mslog("TTY * is not NULL");
 		return EXIT_FAILURE;
 	}
 	free(tty);
@@ -429,24 +436,24 @@ ttydestroy(TTY * tty)
 int
 initcolor(void)
 {
-	if (!has_colors()) {
-		fprintf(stderr, "TTY does not support color\n");
-		return EXIT_FAILURE;
+	if (has_colors()) {
+		if (start_color() == ERR)
+			return EXIT_FAILURE;
+
+		if (init_pair(WIN_BOX, COLOR_WHITE, COLOR_BLUE) == ERR)
+			return EXIT_FAILURE;
+
+		if (init_pair(MSG_BOX, COLOR_WHITE, COLOR_BLUE) == ERR)
+			return EXIT_FAILURE;
+
+		if (init_pair(ERR_BOX, COLOR_WHITE, COLOR_RED) == ERR)
+			return EXIT_FAILURE;
+
+		if (init_pair(BAK_BOX, COLOR_WHITE, COLOR_RED) == ERR)
+			return EXIT_FAILURE;
+	} else {
+		mslog("TTY does not support color");
 	}
-	if (start_color() == ERR)
-		return EXIT_FAILURE;
-
-	if (init_pair(WIN_BOX, COLOR_WHITE, COLOR_BLUE) == ERR)
-		return EXIT_FAILURE;
-
-	if (init_pair(MSG_BOX, COLOR_WHITE, COLOR_BLUE) == ERR)
-		return EXIT_FAILURE;
-
-	if (init_pair(ERR_BOX, COLOR_WHITE, COLOR_RED) == ERR)
-		return EXIT_FAILURE;
-
-	if (init_pair(BAK_BOX, COLOR_WHITE, COLOR_RED) == ERR)
-		return EXIT_FAILURE;
 
 	return EXIT_SUCCESS;
 }
@@ -477,21 +484,20 @@ mainmenu(TTY * tty)
 {
 	int c;
 
-	if (wbkgd(tty->win, COLOR_PAIR(WIN_BOX))) {
-		fprintf(stderr, "(mainmenu) Couldnt set background color\n");
-		return EXIT_FAILURE;
+	if (has_colors()) {
+		if (wbkgd(tty->win, COLOR_PAIR(WIN_BOX)))
+			mslog("Failed to set background color");
 	}
-	if (curs_set(0) == ERR) {
-		fprintf(stderr, "(mainmenu) Couldnt hide the cursor\n");
-		return EXIT_FAILURE;
-	}
+	if (curs_set(0) == ERR)
+		mslog("Failed to hide cursor");
+
 	printtitle(tty);
 
-	mvwprintw(tty->win, (GM_WIN_Y / 2) - (GM_WIN_Y / 12),
-	    (GM_WIN_X / 2) - strlen("(1) PLAY"), "(1) PLAY");
+	mvwprintw(tty->win, (WIN_Y / 2) - (WIN_Y / 12),
+	    (WIN_X / 2) - strlen("(1) PLAY"), "(1) PLAY");
 
-	mvwprintw(tty->win, (GM_WIN_Y / 2) + (GM_WIN_Y / 12),
-	    (GM_WIN_X / 2) - strlen("(2) QUIT"), "(2) QUIT");
+	mvwprintw(tty->win, (WIN_Y / 2) + (WIN_Y / 12),
+	    (WIN_X / 2) - strlen("(2) QUIT"), "(2) QUIT");
 
 	wrefresh(tty->win);
 
@@ -501,14 +507,12 @@ mainmenu(TTY * tty)
 		if (c == '1' || c == '2')
 			break;
 
-	if (curs_set(1) == ERR) {
-		fprintf(stderr, "(mainmenu) Couldnt unhide the cursor\n");
-		return EXIT_FAILURE;
-	}
-	if (wclear(tty->win) == ERR) {
-		fprintf(stderr, "(mainmenu) Couldnt clear window\n");
-		return EXIT_FAILURE;
-	}
+	if (curs_set(1) == ERR)
+		mslog("Failed to show cursor");
+
+	if (wclear(tty->win) == ERR)
+		mslog("Failed to clear window");
+
 	if (c == '1')
 		eventloop(tty);
 
@@ -521,27 +525,30 @@ setup(void)
 	TTY *tty = (TTY *) NULL;
 
 	if (!(tty = ttyinit()))
-		err(EXIT_FAILURE, "Couldnt init TTY");
+		mslog("Failed to init TTY struct");
 
 	if (raw() == ERR)
-		err(EXIT_FAILURE, "Couldnt enter raw mode");
+		mslog("Failed to enter raw mode");
 
 	if (noecho() == ERR)
-		err(EXIT_FAILURE, "Couldnt disable echoing");
+		mslog("Failed to disable echoing");
 
 	if (initcolor())
-		err(EXIT_FAILURE, "Couldnt init color");
+		mslog("Failed to init color");
 
 	if (keypad(tty->win, TRUE) == ERR)
-		err(EXIT_FAILURE, "Couldnt init keypad");
+		mslog("Failed to init keypad");
 
-	if (wbkgd(stdscr, COLOR_PAIR(BAK_BOX))) {
-		fprintf(stderr, "(setup) Couldnt set background color\n");
-		return EXIT_FAILURE;
+	if (has_colors()) {
+		if (wbkgd(stdscr, COLOR_PAIR(BAK_BOX)))
+			mslog("Failed to set background color");
 	}
-	box(stdscr, 0, 0);
 
-	wrefresh(stdscr);
+	if (box(stdscr, 0, 0) == ERR)
+		mslog("Failed to draw box");
+
+	if (wrefresh(stdscr))
+		mslog("Failed to refresh window");
 
 	if (mainmenu(tty))
 		return EXIT_FAILURE;
