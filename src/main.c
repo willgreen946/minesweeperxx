@@ -81,23 +81,29 @@ resizecheck(TTY * tty)
 	return false;
 }
 
+/*
+ * Prints error messages to the mserrlog.txt file
+ */
 void
-mslog(const char *format,...)
+mslog(const char *str)
 {
 	FILE *fp;
-	va_list args;
+  time_t curtime;
+  char strtime[9];
+  struct tm * timeinfo;
 
-	fp = fopen("mserrlog.txt", "w");
-
-	va_start(args, format);
+	fp = fopen("mserrlog.txt", "a");
 
 	if (!fp) {
 		fprintf(stderr, "Failed to open log file:%s\n", strerror(errno));
 		return;
 	}
-	vfprintf(stderr, format, args);
-	vfprintf(fp, format, args);
-	fprintf(fp, "\n");
+
+  time(&curtime);
+  timeinfo = localtime(&curtime);
+  strftime(strtime, sizeof(strtime), "%H:%M:%S", timeinfo);
+
+  fprintf(fp, "[%s]:%s\n", strtime, str);
 
 	if (fclose(fp)) {
 		fprintf(stderr, "%s\n", strerror(errno));
@@ -399,7 +405,7 @@ ttyinit(void)
 	getmaxyx(stdscr, tmp->maxy, tmp->maxx);
 
 	if (tmp->maxy < WIN_Y || tmp->maxx < WIN_X) {
-		mslog("TTY to small to function, need at least 80x24");
+		mslog("TTY too small to function, need at least 80x24");
 		return (TTY *) NULL;
 	}
 	/* Should print the new window in the center of the screen */
@@ -524,8 +530,10 @@ setup(void)
 {
 	TTY *tty = (TTY *) NULL;
 
-	if (!(tty = ttyinit()))
+	if (!(tty = ttyinit())) {
 		mslog("Failed to init TTY struct");
+    return EXIT_FAILURE;
+  }
 
 	if (raw() == ERR)
 		mslog("Failed to enter raw mode");
