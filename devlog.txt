@@ -1,0 +1,26 @@
+6th November 2023:
+  I started creating the game using C and the ncurses C libary, I got a mockup of the screen,
+  working, I created a main menu and a function to draw the grid. Later on I limited the game,
+  window to 80x24 to focus more on the mechanics of the game rather than the graphics.
+  Despite this limitation I managed to get the math right (I think) for drawing the UI.
+
+7th November 2023:
+  I picked up where I left off and got to working on the main event loop and some of the
+  mechanics for making the game. I had an annoying bug in the event loop where it wouldn't
+  register the key correctly and perform the action, I solved this today by adding a bracket.
+  
+  I implemented functions to move the cursor around the game board and only the game board.
+
+  Now hitting the escape key will drop you back to the main menu.
+
+  I managed to map the grid out into arrays by having a struct array called ygrid in the TTY struct.
+  Inside the ygrid was an array of structs called xgrid, which holds data about the grid position.
+  Right now it holds bool variables for weather it's a bomb or not, weather it's been selected and
+  weather it's been flagged.
+
+8th November 2023:
+  I changed the algorithim used to genrate bombs, which before generated a random number between 0 and 1,
+  across every square on the grid, and if it was 1, a bomb would be placed there, since there is a limit
+  to the amount of bombs, this meant the entire top half was more or less bombs. Now it generates 2 
+  random numbers across every column and places a bomb there until it reaches the bomb count, this 
+  makes it a lot more random.

@@ -1,10 +1,11 @@
-CC=gcc
+CC=clang
 INCS=-I/usr/include
 LIBS=-L/usr/libs
-CFLAGS=-std=c89 -lc -lcurses  -Wall -Wextra -pedantic -g
+CFLAGS=-std=c99 -lc -lcurses  -Wall -Wextra -pedantic -g
 
 all:
 	$(CC) src/main.c $(INCS) $(LIBS) $(CFLAGS) -o msxx
 format:
-	clang-format -style=GNU src/main.c > main.c
-	mv main.c src/main.c
+	#clang-format -style=GNU src/main.c > main.c
+	indent src/main.c
+	#mv main.c src/main.c
