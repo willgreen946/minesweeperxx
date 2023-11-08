@@ -465,7 +465,7 @@ printtitle(TTY * tty)
 		return;
 
 	for (y = 2; fgets(buf, 1024, fp); y++) {
-		mvwprintw(tty->win, y, (GRID_X / 10), buf);
+		mvwprintw(tty->win, y, (GRID_X / 10), "%s", buf);
 	}
 
 	wrefresh(tty->win);
