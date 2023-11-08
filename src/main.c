@@ -399,13 +399,13 @@ ttyinit(void)
 		return (TTY *) NULL;
 
 	if (!(stdscr = initscr())) {
-		mslog("Failed to init curses");
+		mslog("FATAL:Failed to init curses");
 		return (TTY *) NULL;
 	}
 	getmaxyx(stdscr, tmp->maxy, tmp->maxx);
 
 	if (tmp->maxy < WIN_Y || tmp->maxx < WIN_X) {
-		mslog("TTY too small to function, need at least 80x24");
+		mslog("FATAL:TTY too small to function, need at least 80x24");
 		return (TTY *) NULL;
 	}
 	/* Should print the new window in the center of the screen */
@@ -413,7 +413,7 @@ ttyinit(void)
 	    = newwin(WIN_Y, WIN_X, (tmp->maxy / 2) - (WIN_Y / 2),
 	    (tmp->maxx / 2) - (WIN_X / 2)))) {
 
-		mslog("Failed to create window");
+		mslog("FATAL:Failed to create window");
 		return (TTY *) NULL;
 	}
 	return tmp;
@@ -531,7 +531,7 @@ setup(void)
 	TTY *tty = (TTY *) NULL;
 
 	if (!(tty = ttyinit())) {
-		mslog("Failed to init TTY struct");
+		mslog("FATAL:Failed to init TTY struct");
     return EXIT_FAILURE;
   }
 
