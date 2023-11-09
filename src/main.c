@@ -8,50 +8,23 @@
 #include <string.h>
 #include <time.h>
 #include "config.h"
+#include "screen.h"
 #include "mslog.h"
 #include "move.h"
 
-/*
- * Used to keep a map of all the chars on the grid.
- * holding data about the part of the grid,
- * Like weather it's a bomb and been selected previously
- */
-struct XGRID {
-	bool bomb;
-	bool selected;
-	bool flagged;
-};
-/*
- * Represents the Y axis of the game grid
- * Should be declared as an array in TTY
- * Holds an array of the X axis
- */
-struct YGRID {
-	struct XGRID xgrd[GRD_X];
-};
-
-typedef struct {
-	int maxx;
-	int maxy;
-	int cury;
-	int curx;
-	struct YGRID ygrd[GRD_Y];
-	WINDOW *win;
-} TTY;
-
-int mainmenu(TTY *);
+int mainmenu(SCR *);
 
 bool
-resizecheck(TTY * tty)
+resizecheck(SCR * scr)
 {
 	int y, x;
 
-	getmaxyx(tty->win, y, x);
+	getmaxyx(scr->win, y, x);
 
 	if (y < WIN_Y || x < WIN_X)
-		err(EXIT_FAILURE, "TTY too small to function");
+		err(EXIT_FAILURE, "SCR too small to function");
 
-	if (y != tty->maxy || x != tty->maxy)
+	if (y != scr->maxy || x != scr->maxy)
 		return true;
 
 	return false;
@@ -64,58 +37,58 @@ resizecheck(TTY * tty)
  * The count is returned by the function
  */
 int
-bombsurroundcount(TTY * tty, int y, int x)
+bombsurroundcount(SCR * scr, int y, int x)
 {
 	int count = 0;
 
-	if (tty->ygrd[y].xgrd[x + 1].bomb)
+	if (scr->ygrd[y].xgrd[x + 1].bomb)
 		count++;
 
-	if (tty->ygrd[y].xgrd[x - 1].bomb)
+	if (scr->ygrd[y].xgrd[x - 1].bomb)
 		count++;
 
-	if (tty->ygrd[y + 1].xgrd[x].bomb)
+	if (scr->ygrd[y + 1].xgrd[x].bomb)
 		count++;
 
-	if (tty->ygrd[y + 1].xgrd[x + 1].bomb)
+	if (scr->ygrd[y + 1].xgrd[x + 1].bomb)
 		count++;
 
-	if (tty->ygrd[y + 1].xgrd[x - 1].bomb)
+	if (scr->ygrd[y + 1].xgrd[x - 1].bomb)
 		count++;
 
-	if (tty->ygrd[y - 1].xgrd[x].bomb)
+	if (scr->ygrd[y - 1].xgrd[x].bomb)
 		count++;
 
-	if (tty->ygrd[y - 1].xgrd[x + 1].bomb)
+	if (scr->ygrd[y - 1].xgrd[x + 1].bomb)
 		count++;
 
-	if (tty->ygrd[y - 1].xgrd[x - 1].bomb)
+	if (scr->ygrd[y - 1].xgrd[x - 1].bomb)
 		count++;
 
 	return count;
 }
 
 void
-scanxgrid(TTY * tty, int y, int min, bool inc)
+scanxgrid(SCR * scr, int y, int min, bool inc)
 {
 	int x;
 	int count = 0;
 
 	/* Go along the X axis <- this way */
-	for (x = tty->curx; x != min;) {
-		if (tty->ygrd[y].xgrd[x].selected)
+	for (x = scr->curx; x != min;) {
+		if (scr->ygrd[y].xgrd[x].selected)
 			break;	/* Do nothing if its already been selected */
 
-		else if (tty->ygrd[y].xgrd[x].bomb)
+		else if (scr->ygrd[y].xgrd[x].bomb)
 			break;	/* Do nothing if its a bomb */
 
-		else if ((count = bombsurroundcount(tty, y, x)) > 0) {
-			tty->ygrd[y].xgrd[x].selected = true;
-			mvwprintw(tty->win, y, x, "%d", count);
+		else if ((count = bombsurroundcount(scr, y, x)) > 0) {
+			scr->ygrd[y].xgrd[x].selected = true;
+			mvwprintw(scr->win, y, x, "%d", count);
 			return;
 		} else {
-			tty->ygrd[y].xgrd[x].selected = true;
-			mvwprintw(tty->win, y, x, "~");
+			scr->ygrd[y].xgrd[x].selected = true;
+			mvwprintw(scr->win, y, x, "~");
 
 			if (inc)
 				x++;
@@ -132,16 +105,16 @@ scanxgrid(TTY * tty, int y, int min, bool inc)
  * If the char has bombs around it, it will print the count
  */
 void
-scanygrid(TTY * tty, int min, bool inc)
+scanygrid(SCR * scr, int min, bool inc)
 {
 	int y;
 
-	for (y = tty->cury; y != min;) {
+	for (y = scr->cury; y != min;) {
 		/* Go along the X axis <- this way */
-		scanxgrid(tty, y, 0, false);
+		scanxgrid(scr, y, 0, false);
 
 		/* Go along the X axis -> this way */
-		scanxgrid(tty, y, GRD_X, true);
+		scanxgrid(scr, y, GRD_X, true);
 
 		if (inc)
 			y++;
@@ -154,23 +127,23 @@ scanygrid(TTY * tty, int min, bool inc)
  * Else it should scan the grid to replace chars
  */
 int
-selecthandle(TTY * tty)
+selecthandle(SCR * scr)
 {
 	/* If the user selects a bomb */
-	if (tty->ygrd[tty->cury].xgrd[tty->curx].bomb) {
-		mvwprintw(tty->win, WIN_Y / 2, WIN_X / 2, "BOOM!!!!!!");
-		mvwprintw(tty->win, tty->cury, tty->curx, "*");
-		wrefresh(tty->win);
-		wgetch(tty->win);
+	if (scr->ygrd[scr->cury].xgrd[scr->curx].bomb) {
+		mvwprintw(scr->win, WIN_Y / 2, WIN_X / 2, "BOOM!!!!!!");
+		mvwprintw(scr->win, scr->cury, scr->curx, "*");
+		wrefresh(scr->win);
+		wgetch(scr->win);
 		return EXIT_FAILURE;
 	} else {
 		/* Go down the grid */
-		scanygrid(tty, GRD_Y, true);
+		scanygrid(scr, GRD_Y, true);
 
 		/* Go up the grid */
-		scanygrid(tty, 0, false);
+		scanygrid(scr, 0, false);
 
-		wrefresh(tty->win);
+		wrefresh(scr->win);
 	}
 
 	return EXIT_SUCCESS;
@@ -179,12 +152,12 @@ selecthandle(TTY * tty)
  * Handles the processing of marking a block a bomb
  */
 int
-flaghandle(TTY * tty)
+flaghandle(SCR * scr)
 {
-	if (!tty->ygrd[tty->cury].xgrd[tty->curx].flagged) {
-		mvwprintw(tty->win, tty->cury, tty->curx, "F");
-		wrefresh(tty->win);
-		tty->ygrd[tty->cury].xgrd[tty->curx].flagged = true;
+	if (!scr->ygrd[scr->cury].xgrd[scr->curx].flagged) {
+		mvwprintw(scr->win, scr->cury, scr->curx, "F");
+		wrefresh(scr->win);
+		scr->ygrd[scr->cury].xgrd[scr->curx].flagged = true;
 	}
 	 /* If the sqaure is already flagged do nothing */ 
 	else
@@ -194,31 +167,31 @@ flaghandle(TTY * tty)
 }
 
 int
-parsekey(TTY * tty, int c)
+parsekey(SCR * scr, int c)
 {
 	switch (c) {
 	case KEY_UP:
 	case 'k':
-		moveup(tty->win, &tty->cury, tty->curx);
+		moveup(scr->win, &scr->cury, scr->curx);
 		return EXIT_SUCCESS;
 	case KEY_DOWN:
 	case 'j':
-		movedown(tty->win, &tty->cury, tty->curx);
+		movedown(scr->win, &scr->cury, scr->curx);
 		return EXIT_SUCCESS;
 	case KEY_LEFT:
 	case 'h':
-		moveleft(tty->win, tty->cury, &tty->curx);
+		moveleft(scr->win, scr->cury, &scr->curx);
 		return EXIT_SUCCESS;
 	case KEY_RIGHT:
 	case 'l':
-		moveright(tty->win, tty->cury, &tty->curx);
+		moveright(scr->win, scr->cury, &scr->curx);
 		return EXIT_SUCCESS;
 	case RET:
 	case 'e':
-		return selecthandle(tty);
+		return selecthandle(scr);
 	case SPC:
 	case 'f':
-		return flaghandle(tty);
+		return flaghandle(scr);
 	}
 
 	return EXIT_SUCCESS;
@@ -229,7 +202,7 @@ parsekey(TTY * tty, int c)
  * and places them in the grid
  */
 int
-drawgrid(TTY * tty)
+drawgrid(SCR * scr)
 {
 	int y, x;
 	int yrand, xrand;
@@ -237,7 +210,7 @@ drawgrid(TTY * tty)
 	srand(time(0));
 
 	if (has_colors()) {
-		if (wbkgd(tty->win, COLOR_PAIR(WIN_BOX))) {
+		if (wbkgd(scr->win, COLOR_PAIR(WIN_BOX))) {
 			mslog("Failed to set background color");
 			return EXIT_FAILURE;
 		}
@@ -246,10 +219,10 @@ drawgrid(TTY * tty)
 	/* Draws the grid and randomly genrates bombs */
 	for (y = 0; y < GRD_Y; y++) {
 		for (x = 0; x < GRD_X; x++) {
-			mvwprintw(tty->win, y, x, "#");
-			tty->ygrd[y].xgrd[x].bomb = false;
-			tty->ygrd[y].xgrd[x].selected = false;
-			tty->ygrd[y].xgrd[x].flagged = false;
+			mvwprintw(scr->win, y, x, "#");
+			scr->ygrd[y].xgrd[x].bomb = false;
+			scr->ygrd[y].xgrd[x].selected = false;
+			scr->ygrd[y].xgrd[x].flagged = false;
 		}
 	}
 
@@ -257,15 +230,15 @@ drawgrid(TTY * tty)
 	for (y = 0; y < BOMBS; y++) {
 		yrand = (int)rand() % GRD_Y;
 		xrand = (int)rand() % GRD_X;
-		tty->ygrd[yrand].xgrd[xrand].bomb = true;
-		/**mvwprintw(tty->win, yrand, xrand, "B");*/
+		scr->ygrd[yrand].xgrd[xrand].bomb = true;
+		/**mvwprintw(scr->win, yrand, xrand, "B");*/
 	}
 
 	/* Reset cursor position */
-	tty->cury = GRD_Y / 2;
-	tty->curx = GRD_X / 2;
-	wmove(tty->win, tty->cury, tty->curx);
-	wrefresh(tty->win);
+	scr->cury = GRD_Y / 2;
+	scr->curx = GRD_X / 2;
+	wmove(scr->win, scr->cury, scr->curx);
+	wrefresh(scr->win);
 	return EXIT_SUCCESS;
 }
 /*
@@ -274,73 +247,23 @@ drawgrid(TTY * tty)
  * It reads until an escape char is sent.
  */
 void
-eventloop(TTY * tty)
+eventloop(SCR * scr)
 {
 	int c;
 
-	if (drawgrid(tty))
+	if (drawgrid(scr))
 		return;
 
-	while ((c = wgetch(tty->win)) != ESC) {
-		if (parsekey(tty, c))
+	while ((c = wgetch(scr->win)) != ESC) {
+		if (parsekey(scr, c))
 			break;
 	}
 
-	if (wclear(tty->win) == ERR) {
+	if (wclear(scr->win) == ERR) {
 		mslog("Failed to clear window");
 		return;
 	}
-	mainmenu(tty);
-}
-/*
- * Initialises TTY struct
- * Returns a pointer to the initialised struct
- * Memory needs to be freed elsewhere (ttydestroy)
- */
-TTY *
-ttyinit(void)
-{
-	TTY *tmp = (TTY *) NULL;
-
-	if (!(tmp = (TTY *) malloc(sizeof(*tmp))))
-		return (TTY *) NULL;
-
-	if (!(stdscr = initscr())) {
-		mslog("FATAL:Failed to init curses");
-		return (TTY *) NULL;
-	}
-	getmaxyx(stdscr, tmp->maxy, tmp->maxx);
-
-	if (tmp->maxy < WIN_Y || tmp->maxx < WIN_X) {
-		mslog("FATAL:TTY too small to function, need at least 80x24");
-		return (TTY *) NULL;
-	}
-	/* Should print the new window in the center of the screen */
-	if (!(tmp->win
-	    = newwin(WIN_Y, WIN_X, (tmp->maxy / 2) - (WIN_Y / 2),
-	    (tmp->maxx / 2) - (WIN_X / 2)))) {
-
-		mslog("FATAL:Failed to create window");
-		return (TTY *) NULL;
-	}
-	return tmp;
-}
-/*
- * Ends curses and frees memory with TTY struct
- */
-int
-ttydestroy(TTY * tty)
-{
-	if (endwin() == ERR) {
-		mslog("Failed to end curses session");
-		return EXIT_FAILURE;
-	}
-	if (!tty) {
-		mslog("TTY * is not NULL");
-		return EXIT_FAILURE;
-	}
-	free(tty);
-	return EXIT_SUCCESS;
+	mainmenu(scr);
 }
 /*
  * Initialises all of the color pairs for the program
@@ -365,7 +288,7 @@ initcolor(void)
 		if (init_pair(BAK_BOX, COLOR_WHITE, COLOR_RED) == ERR)
 			return EXIT_FAILURE;
 	} else {
-		mslog("TTY does not support color");
+		mslog("SCR does not support color");
 	}
 
 	return EXIT_SUCCESS;
@@ -375,7 +298,7 @@ initcolor(void)
  * Looks in a hardcoded path
  */
 void
-printtitle(TTY * tty)
+printtitle(SCR * scr)
 {
 	int y;
 	char buf[1024];
@@ -385,49 +308,49 @@ printtitle(TTY * tty)
 		return;
 
 	for (y = 2; fgets(buf, 1024, fp); y++) {
-		mvwprintw(tty->win, y, (GRD_X / 10), "%s", buf);
+		mvwprintw(scr->win, y, (GRD_X / 10), "%s", buf);
 	}
 
-	wrefresh(tty->win);
+	wrefresh(scr->win);
 	fclose(fp);
 }
 
 int
-mainmenu(TTY * tty)
+mainmenu(SCR * scr)
 {
 	int c;
 
 	if (has_colors()) {
-		if (wbkgd(tty->win, COLOR_PAIR(WIN_BOX)))
+		if (wbkgd(scr->win, COLOR_PAIR(WIN_BOX)))
 			mslog("Failed to set background color");
 	}
 	if (curs_set(0) == ERR)
 		mslog("Failed to hide cursor");
 
-	printtitle(tty);
+	printtitle(scr);
 
-	mvwprintw(tty->win, (WIN_Y / 2) - (WIN_Y / 12),
+	mvwprintw(scr->win, (WIN_Y / 2) - (WIN_Y / 12),
 	    (WIN_X / 2) - strlen("(1) PLAY"), "(1) PLAY");
 
-	mvwprintw(tty->win, (WIN_Y / 2) + (WIN_Y / 12),
+	mvwprintw(scr->win, (WIN_Y / 2) + (WIN_Y / 12),
 	    (WIN_X / 2) - strlen("(2) QUIT"), "(2) QUIT");
 
-	wrefresh(tty->win);
+	wrefresh(scr->win);
 
-	box(tty->win, 0, 0);
+	box(scr->win, 0, 0);
 
-	while ((c = wgetch(tty->win)))
+	while ((c = wgetch(scr->win)))
 		if (c == '1' || c == '2')
 			break;
 
 	if (curs_set(1) == ERR)
 		mslog("Failed to show cursor");
 
-	if (wclear(tty->win) == ERR)
+	if (wclear(scr->win) == ERR)
 		mslog("Failed to clear window");
 
 	if (c == '1')
-		eventloop(tty);
+		eventloop(scr);
 
 	return EXIT_SUCCESS;
 }
@@ -435,10 +358,10 @@ mainmenu(TTY * tty)
 int
 setup(void)
 {
-	TTY *tty = (TTY *) NULL;
+	SCR *scr = (SCR *) NULL;
 
-	if (!(tty = ttyinit())) {
-		mslog("FATAL:Failed to init TTY struct");
+	if (!(scr = scrinit())) {
+		mslog("FATAL:Failed to init SCR struct");
     return EXIT_FAILURE;
   }
 
@@ -451,7 +374,7 @@ setup(void)
 	if (initcolor())
 		mslog("Failed to init color");
 
-	if (keypad(tty->win, TRUE) == ERR)
+	if (keypad(scr->win, TRUE) == ERR)
 		mslog("Failed to init keypad");
 
 	if (has_colors()) {
@@ -465,10 +388,10 @@ setup(void)
 	if (wrefresh(stdscr))
 		mslog("Failed to refresh window");
 
-	if (mainmenu(tty))
+	if (mainmenu(scr))
 		return EXIT_FAILURE;
 
-	return ttydestroy(tty);
+	return scrdestroy(scr);
 }
 
 int
