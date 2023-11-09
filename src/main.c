@@ -7,34 +7,10 @@
 #include <stdarg.h>
 #include <string.h>
 #include <time.h>
+#include "config.h"
+#include "mslog.h"
+#include "move.h"
 
-/*
- * Color pair numbers
- */
-enum {
-	WIN_BOX = 1,
-	MSG_BOX = 2,
-	ERR_BOX = 3,
-	BAK_BOX = 4,
-};
-/*
- * Some dimensions for the screen
- */
-enum {
-	WIN_Y = 24,
-	WIN_X = 80,
-	GRID_Y = 16,
-	GRID_X = 30,
-	BOMB_COUNT = 99
-};
-/*
- * Some key ascii codes
- */
-enum {
-	ESC = 27,
-	RET = 10,
-	SPC = 32
-};
 /*
  * Used to keep a map of all the chars on the grid.
  * holding data about the part of the grid,
@@ -51,7 +27,7 @@ struct XGRID {
  * Holds an array of the X axis
  */
 struct YGRID {
-	struct XGRID xgrd[GRID_X];
+	struct XGRID xgrd[GRD_X];
 };
 
 typedef struct {
@@ -59,7 +35,7 @@ typedef struct {
 	int maxy;
 	int cury;
 	int curx;
-	struct YGRID ygrd[GRID_Y];
+	struct YGRID ygrd[GRD_Y];
 	WINDOW *win;
 } TTY;
 
@@ -81,75 +57,6 @@ resizecheck(TTY * tty)
 	return false;
 }
 
-/*
- * Prints error messages to the mserrlog.txt file
- */
-void
-mslog(const char *str)
-{
-	FILE *fp;
-  time_t curtime;
-  char strtime[9];
-  struct tm * timeinfo;
-
-	fp = fopen("mserrlog.txt", "a");
-
-	if (!fp) {
-		fprintf(stderr, "Failed to open log file:%s\n", strerror(errno));
-		return;
-	}
-
-  time(&curtime);
-  timeinfo = localtime(&curtime);
-  strftime(strtime, sizeof(strtime), "%H:%M:%S", timeinfo);
-
-  fprintf(fp, "[%s]:%s\n", strtime, str);
-
-	if (fclose(fp)) {
-		fprintf(stderr, "%s\n", strerror(errno));
-		return;
-	}
-}
-
-void
-moveup(TTY * tty)
-{
-	if ((tty->cury - 1) >= 0)
-		tty->cury--;
-
-	wmove(tty->win, tty->cury, tty->curx);
-	wrefresh(tty->win);
-}
-
-void
-movedown(TTY * tty)
-{
-	if (tty->cury < (GRID_Y - 1))
-		tty->cury++;
-
-	wmove(tty->win, tty->cury, tty->curx);
-	wrefresh(tty->win);
-}
-
-void
-moveleft(TTY * tty)
-{
-	if ((tty->curx - 1) >= 0)
-		tty->curx--;
-
-	wmove(tty->win, tty->cury, tty->curx);
-	wrefresh(tty->win);
-}
-
-void
-moveright(TTY * tty)
-{
-	if (tty->curx < (GRID_X - 1))
-		tty->curx++;
-
-	wmove(tty->win, tty->cury, tty->curx);
-	wrefresh(tty->win);
-}
 /*
  * 8 if statments to see if the 8 surrounding blocks
  * are bombs, if they are bombs the count is incremented by 1
@@ -234,7 +141,7 @@ scanygrid(TTY * tty, int min, bool inc)
 		scanxgrid(tty, y, 0, false);
 
 		/* Go along the X axis -> this way */
-		scanxgrid(tty, y, GRID_X, true);
+		scanxgrid(tty, y, GRD_X, true);
 
 		if (inc)
 			y++;
@@ -258,7 +165,7 @@ selecthandle(TTY * tty)
 		return EXIT_FAILURE;
 	} else {
 		/* Go down the grid */
-		scanygrid(tty, GRID_Y, true);
+		scanygrid(tty, GRD_Y, true);
 
 		/* Go up the grid */
 		scanygrid(tty, 0, false);
@@ -292,19 +199,19 @@ parsekey(TTY * tty, int c)
 	switch (c) {
 	case KEY_UP:
 	case 'k':
-		moveup(tty);
+		moveup(tty->win, &tty->cury, tty->curx);
 		return EXIT_SUCCESS;
 	case KEY_DOWN:
 	case 'j':
-		movedown(tty);
+		movedown(tty->win, &tty->cury, tty->curx);
 		return EXIT_SUCCESS;
 	case KEY_LEFT:
 	case 'h':
-		moveleft(tty);
+		moveleft(tty->win, tty->cury, &tty->curx);
 		return EXIT_SUCCESS;
 	case KEY_RIGHT:
 	case 'l':
-		moveright(tty);
+		moveright(tty->win, tty->cury, &tty->curx);
 		return EXIT_SUCCESS;
 	case RET:
 	case 'e':
@@ -317,8 +224,8 @@ parsekey(TTY * tty, int c)
 	return EXIT_SUCCESS;
 }
 /*
- * Draws the onscreen grid according to GRID_Y & GRID_X
- * Generates X (BOMB_COUNT) amount of bombs,
+ * Draws the onscreen grid according to GRD_Y & GRD_X
+ * Generates X (BOMBS) amount of bombs,
  * and places them in the grid
  */
 int
@@ -337,8 +244,8 @@ drawgrid(TTY * tty)
 	}
 
 	/* Draws the grid and randomly genrates bombs */
-	for (y = 0; y < GRID_Y; y++) {
-		for (x = 0; x < GRID_X; x++) {
+	for (y = 0; y < GRD_Y; y++) {
+		for (x = 0; x < GRD_X; x++) {
 			mvwprintw(tty->win, y, x, "#");
 			tty->ygrd[y].xgrd[x].bomb = false;
 			tty->ygrd[y].xgrd[x].selected = false;
@@ -347,16 +254,16 @@ drawgrid(TTY * tty)
 	}
 
 	/* Set the bombs, using y as a counter */
-	for (y = 0; y < BOMB_COUNT; y++) {
-		yrand = (int)rand() % GRID_Y;
-		xrand = (int)rand() % GRID_X;
+	for (y = 0; y < BOMBS; y++) {
+		yrand = (int)rand() % GRD_Y;
+		xrand = (int)rand() % GRD_X;
 		tty->ygrd[yrand].xgrd[xrand].bomb = true;
-		mvwprintw(tty->win, yrand, xrand, "B");
+		/**mvwprintw(tty->win, yrand, xrand, "B");*/
 	}
 
 	/* Reset cursor position */
-	tty->cury = GRID_Y / 2;
-	tty->curx = GRID_X / 2;
+	tty->cury = GRD_Y / 2;
+	tty->curx = GRD_X / 2;
 	wmove(tty->win, tty->cury, tty->curx);
 	wrefresh(tty->win);
 	return EXIT_SUCCESS;
@@ -478,7 +385,7 @@ printtitle(TTY * tty)
 		return;
 
 	for (y = 2; fgets(buf, 1024, fp); y++) {
-		mvwprintw(tty->win, y, (GRID_X / 10), "%s", buf);
+		mvwprintw(tty->win, y, (GRD_X / 10), "%s", buf);
 	}
 
 	wrefresh(tty->win);
