@@ -41,6 +41,6 @@ typedef struct {
  */
 SCR * scrinit(void);
 
-#include "screen.c"
+int scrdestroy(SCR *);
 
 #endif /* __SCREEN_H__ */

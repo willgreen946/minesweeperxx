@@ -13,22 +13,17 @@
 #include "move.h"
 
 int mainmenu(SCR *);
-
-bool
-resizecheck(SCR * scr)
-{
-	int y, x;
-
-	getmaxyx(scr->win, y, x);
-
-	if (y < WIN_Y || x < WIN_X)
-		err(EXIT_FAILURE, "SCR too small to function");
-
-	if (y != scr->maxy || x != scr->maxy)
-		return true;
-
-	return false;
-}
+int bombsurroundcount(SCR *, int, int);
+void scanxgrid(SCR *, int, int, bool);
+void scanygrid(SCR *, int, bool);
+int selecthandle(SCR *);
+int flaghandle(SCR *);
+int parsekey(SCR *, int);
+int drawgrid(SCR *);
+void printtitle(SCR *);
+int initcolor(void);
+void eventloop(SCR *);
+int setup(void);
 
 /*
  * 8 if statments to see if the 8 surrounding blocks
@@ -207,7 +202,7 @@ drawgrid(SCR * scr)
 	int y, x;
 	int yrand, xrand;
 
-	srand(time(0));
+	srand((unsigned int)time(0));
 
 	if (has_colors()) {
 		if (wbkgd(scr->win, COLOR_PAIR(WIN_BOX))) {

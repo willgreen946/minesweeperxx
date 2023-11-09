@@ -23,6 +23,4 @@ void moveleft (WINDOW *, int , int *);
  */
 void moveright (WINDOW *, int , int *);
 
-#include "move.c"
-
 #endif /* __MOVE_H__ */
