@@ -30,9 +30,37 @@ typedef struct {
 	int maxy;
 	int cury;
 	int curx;
+  int flagc;
+  int bombc;
+  float seconds;
 	struct YGRID ygrd[GRD_Y];
 	WINDOW *win;
+  WINDOW *datawin;
 } SCR;
+
+/*
+ * Draws the game grid,
+ * generates bombs on the grid
+ */
+void drawgrid(SCR *);
+
+/*
+ * Updates the time elapsed,
+ * the bomb count, and the flag count
+ */
+void updategamewin(SCR *);
+
+/*
+ * Creates a sub window for the game data,
+ * this is the box on the side that has the time,
+ * and other information inside of it
+ */
+int initgamewin(SCR *);
+
+/*
+ * Initialises color in curses
+ */
+int initcolor(void);
 
 /*
  * Initialises SCR struct
@@ -41,6 +69,10 @@ typedef struct {
  */
 SCR * scrinit(void);
 
+/*
+ * Ends the curses session,
+ * frees all memory with SCR *
+ */
 int scrdestroy(SCR *);
 
 #endif /* __SCREEN_H__ */

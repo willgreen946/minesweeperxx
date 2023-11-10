@@ -19,9 +19,7 @@ void scanygrid(SCR *, int, bool);
 int selecthandle(SCR *);
 int flaghandle(SCR *);
 int parsekey(SCR *, int);
-int drawgrid(SCR *);
-void printtitle(SCR *);
-int initcolor(void);
+int printtitle(WINDOW *);
 void eventloop(SCR *);
 int setup(void);
 
@@ -191,51 +189,7 @@ parsekey(SCR * scr, int c)
 
 	return EXIT_SUCCESS;
 }
-/*
- * Draws the onscreen grid according to GRD_Y & GRD_X
- * Generates X (BOMBS) amount of bombs,
- * and places them in the grid
- */
-int
-drawgrid(SCR * scr)
-{
-	int y, x;
-	int yrand, xrand;
 
-	srand((unsigned int)time(0));
-
-	if (has_colors()) {
-		if (wbkgd(scr->win, COLOR_PAIR(WIN_BOX))) {
-			mslog("Failed to set background color");
-			return EXIT_FAILURE;
-		}
-	}
-
-	/* Draws the grid and randomly genrates bombs */
-	for (y = 0; y < GRD_Y; y++) {
-		for (x = 0; x < GRD_X; x++) {
-			mvwprintw(scr->win, y, x, "#");
-			scr->ygrd[y].xgrd[x].bomb = false;
-			scr->ygrd[y].xgrd[x].selected = false;
-			scr->ygrd[y].xgrd[x].flagged = false;
-		}
-	}
-
-	/* Set the bombs, using y as a counter */
-	for (y = 0; y < BOMBS; y++) {
-		yrand = (int)rand() % GRD_Y;
-		xrand = (int)rand() % GRD_X;
-		scr->ygrd[yrand].xgrd[xrand].bomb = true;
-		/**mvwprintw(scr->win, yrand, xrand, "B");*/
-	}
-
-	/* Reset cursor position */
-	scr->cury = GRD_Y / 2;
-	scr->curx = GRD_X / 2;
-	wmove(scr->win, scr->cury, scr->curx);
-	wrefresh(scr->win);
-	return EXIT_SUCCESS;
-}
 /*
  * The main loop of the program.
  * Takes input from getch and passes it off to the key parser
@@ -246,68 +200,50 @@ eventloop(SCR * scr)
 {
 	int c;
 
-	if (drawgrid(scr))
-		return;
+  if (initgamewin(scr))
+    return;
+
+  /*
+   * Reset cursor position
+   */
+	scr->cury = GRD_Y / 2;
+	scr->curx = GRD_X / 2;
+	wmove(scr->win, scr->cury, scr->curx);
 
 	while ((c = wgetch(scr->win)) != ESC) {
 		if (parsekey(scr, c))
 			break;
+
+    updategamewin(scr);
 	}
 
-	if (wclear(scr->win) == ERR) {
+	if (wclear(scr->win) == ERR)
 		mslog("Failed to clear window");
-		return;
-	}
+
 	mainmenu(scr);
-}
-/*
- * Initialises all of the color pairs for the program
- * It also initialises color as a whole for curses
- */
-int
-initcolor(void)
-{
-	if (has_colors()) {
-		if (start_color() == ERR)
-			return EXIT_FAILURE;
-
-		if (init_pair(WIN_BOX, COLOR_WHITE, COLOR_BLUE) == ERR)
-			return EXIT_FAILURE;
-
-		if (init_pair(MSG_BOX, COLOR_WHITE, COLOR_BLUE) == ERR)
-			return EXIT_FAILURE;
-
-		if (init_pair(ERR_BOX, COLOR_WHITE, COLOR_RED) == ERR)
-			return EXIT_FAILURE;
-
-		if (init_pair(BAK_BOX, COLOR_WHITE, COLOR_RED) == ERR)
-			return EXIT_FAILURE;
-	} else {
-		mslog("SCR does not support color");
-	}
-
-	return EXIT_SUCCESS;
 }
 /*
  * Prints the game title to the screen
  * Looks in a hardcoded path
  */
-void
-printtitle(SCR * scr)
+int
+printtitle(WINDOW * win)
 {
 	int y;
 	char buf[1024];
-	FILE *fp = (FILE *) NULL;
+	FILE *fp = (FILE *) 0;
 
-	if (!(fp = fopen("./assets/title.txt", "r")))
-		return;
+	if (!(fp = fopen("./assets/title.txt", "r"))) {
+    mslog("Failed to open file ./assets/title.txt");
+		return EXIT_FAILURE;
+  }
 
-	for (y = 2; fgets(buf, 1024, fp); y++) {
-		mvwprintw(scr->win, y, (GRD_X / 10), "%s", buf);
-	}
+	for (y = 2; fgets(buf, 1024, fp); y++)
+		mvwprintw(win, y, (GRD_X / 10), "%s", buf);
 
-	wrefresh(scr->win);
 	fclose(fp);
+	wrefresh(win);
+  return EXIT_SUCCESS;
 }
 
 int
@@ -318,11 +254,15 @@ mainmenu(SCR * scr)
 	if (has_colors()) {
 		if (wbkgd(scr->win, COLOR_PAIR(WIN_BOX)))
 			mslog("Failed to set background color");
-	}
+  }
+
 	if (curs_set(0) == ERR)
 		mslog("Failed to hide cursor");
 
-	printtitle(scr);
+	if (printtitle(scr->win)) {
+    mvwprintw(scr->win, (WIN_Y / 2) - ((WIN_Y / 8) + 2),
+	      (WIN_X / 2) - strlen("MINESWEEPE"), "MINESWEEPER++");
+  }
 
 	mvwprintw(scr->win, (WIN_Y / 2) - (WIN_Y / 12),
 	    (WIN_X / 2) - strlen("(1) PLAY"), "(1) PLAY");
@@ -330,9 +270,11 @@ mainmenu(SCR * scr)
 	mvwprintw(scr->win, (WIN_Y / 2) + (WIN_Y / 12),
 	    (WIN_X / 2) - strlen("(2) QUIT"), "(2) QUIT");
 
-	wrefresh(scr->win);
+	if (wrefresh(scr->win) == ERR)
+    mslog("Failed to refresh win");
 
-	box(scr->win, 0, 0);
+	if (box(scr->win, 0, 0) == ERR)
+    mslog("Failed to draw box around win");
 
 	while ((c = wgetch(scr->win)))
 		if (c == '1' || c == '2')
@@ -378,7 +320,7 @@ setup(void)
 	}
 
 	if (box(stdscr, 0, 0) == ERR)
-		mslog("Failed to draw box");
+		mslog("Failed to draw box around stdscr");
 
 	if (wrefresh(stdscr))
 		mslog("Failed to refresh window");

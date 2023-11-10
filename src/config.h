@@ -27,7 +27,7 @@ enum {
   WIN_Y = 24,
   WIN_X = 80,
   GRD_Y = 16,
-  GRD_X = 20,
+  GRD_X = 30,
 };
 
 /*
