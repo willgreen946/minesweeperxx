@@ -14,8 +14,15 @@
 
 int mainmenu(SCR *);
 int bombsurroundcount(SCR *, int, int);
-void scanxgrid(SCR *, int, int, bool);
-void scanygrid(SCR *, int, bool);
+void deathscreen(SCR *);
+int north(SCR *);
+int northwest(SCR *);
+int northeast(SCR *);
+int south(SCR *);
+int southwest(SCR *);
+int southeast(SCR *);
+int west(SCR *);
+int east(SCR *);
 int selecthandle(SCR *);
 int flaghandle(SCR *);
 int parsekey(SCR *, int);
@@ -62,59 +69,123 @@ bombsurroundcount(SCR * scr, int y, int x)
 }
 
 void
-scanxgrid(SCR * scr, int y, int min, bool inc)
+deathscreen(SCR * scr)
 {
-	int x;
-	int count = 0;
+  if (wclear(scr->datawin) == ERR)
+    mslog("Failed to clear datawin");
 
-	/* Go along the X axis <- this way */
-	for (x = scr->curx; x != min;) {
-		if (scr->ygrd[y].xgrd[x].selected)
-			break;	/* Do nothing if its already been selected */
+  mvwprintw(scr->datawin, 1, 1, "YOU DIED!");
+  mvwprintw(scr->datawin, 2, 1, "Press any key to continue");
+	mvwprintw(scr->win, scr->cury, scr->curx, "*");
 
-		else if (scr->ygrd[y].xgrd[x].bomb)
-			break;	/* Do nothing if its a bomb */
+  if (box(scr->datawin, 0, 0) == ERR)
+    mslog("Failed to draw box around datawin");
 
-		else if ((count = bombsurroundcount(scr, y, x)) > 0) {
-			scr->ygrd[y].xgrd[x].selected = true;
-			mvwprintw(scr->win, y, x, "%d", count);
-			return;
-		} else {
-			scr->ygrd[y].xgrd[x].selected = true;
-			mvwprintw(scr->win, y, x, "~");
+  if (wmove(scr->win, scr->cury, scr->curx) == ERR)
+    mslog("Failed to move the cursor in win");
 
-			if (inc)
-				x++;
-			else
-				x--;
-		}
-	}
+  if (wrefresh(scr->win) == ERR)
+    mslog("Failed to refresh win");
+
+  wgetch(scr->win);
 }
-/*
- * Goes up and down the grid scanning each char right to left
- * If the char has already been selected do nothing,
- * If the scan encounters a bomb it will not change the char
- * If the char has no bombs around it, it will print a #
- * If the char has bombs around it, it will print the count
- */
-void
-scanygrid(SCR * scr, int min, bool inc)
+
+int
+north(SCR * scr)
 {
-	int y;
+  int count = 0;
 
-	for (y = scr->cury; y != min;) {
-		/* Go along the X axis <- this way */
-		scanxgrid(scr, y, 0, false);
+  if (scr->ygrd[scr->cury+1].xgrd[scr->curx].bomb)
+      count++;
+  else mvwprintw(scr->win, scr->cury+1, scr->curx, "~");
 
-		/* Go along the X axis -> this way */
-		scanxgrid(scr, y, GRD_X, true);
-
-		if (inc)
-			y++;
-		else
-			y--;
-	}
+  return count;
 }
+
+int
+northwest(SCR * scr)
+{
+  int count = 0;
+
+  if (scr->ygrd[scr->cury+1].xgrd[scr->curx+1].bomb)
+    count++;
+  else mvwprintw(scr->win, scr->cury+1, scr->curx+1, "~");
+
+  return count;
+}
+
+int
+northeast(SCR * scr)
+{
+  int count = 0;
+
+  if (scr->ygrd[scr->cury+1].xgrd[scr->curx-1].bomb)
+      count++;
+  else mvwprintw(scr->win, scr->cury+1, scr->curx-1, "~");
+
+  return count;
+}
+
+int
+south(SCR * scr)
+{
+  int count = 0;
+
+  if (scr->ygrd[scr->cury-1].xgrd[scr->curx].bomb)
+    count++;
+  else mvwprintw(scr->win, scr->cury-1, scr->curx, "~");
+
+  return count;
+}
+
+int
+southwest(SCR * scr)
+{
+  int count = 0;
+
+  if (scr->ygrd[scr->cury-1].xgrd[scr->curx+1].bomb)
+    count++;
+  else mvwprintw(scr->win, scr->cury-1, scr->curx+1, "~");
+
+  return count;
+}
+
+int
+southeast(SCR * scr)
+{
+  int count = 0;
+
+  if (scr->ygrd[scr->cury-1].xgrd[scr->curx-1].bomb)
+    count++;
+  else mvwprintw(scr->win, scr->cury-1, scr->curx-1, "~");
+ 
+  return count;
+}
+
+int
+west(SCR * scr)
+{
+  int count = 0;
+
+  if (scr->ygrd[scr->cury].xgrd[scr->curx-1].bomb)
+    count++;
+  else mvwprintw(scr->win, scr->cury, scr->curx-1, "~");
+
+  return count;
+}
+
+int
+east(SCR * scr)
+{
+  int count = 0;
+
+  if (scr->ygrd[scr->cury].xgrd[scr->curx+1].bomb)
+    count++;
+  else mvwprintw(scr->win, scr->cury, scr->curx+1, "~");
+
+  return count;
+}
+
 /*
  * If the user selects a bomb, go back to the main menu
  * Else it should scan the grid to replace chars
@@ -122,20 +193,32 @@ scanygrid(SCR * scr, int min, bool inc)
 int
 selecthandle(SCR * scr)
 {
+  int x;
+  int y;
+  int count = 0;
+
 	/* If the user selects a bomb */
 	if (scr->ygrd[scr->cury].xgrd[scr->curx].bomb) {
-		mvwprintw(scr->win, WIN_Y / 2, WIN_X / 2, "BOOM!!!!!!");
-		mvwprintw(scr->win, scr->cury, scr->curx, "*");
-		wrefresh(scr->win);
-		wgetch(scr->win);
+    deathscreen(scr);
 		return EXIT_FAILURE;
 	} else {
-		/* Go down the grid */
-		scanygrid(scr, GRD_Y, true);
+    scr->ygrd[scr->cury].xgrd[scr->curx].selected = true;
 
-		/* Go up the grid */
-		scanygrid(scr, 0, false);
+    count += north(scr);
+    count += northwest(scr);
+    count += northeast(scr);
+    count += south(scr);
+    count += southwest(scr);
+    count += southeast(scr);
+    count += west(scr);
+    count += east(scr);
 
+    if (count > 0)
+      mvwprintw(scr->win, scr->cury, scr->curx, "%d", count);
+    else
+      mvwprintw(scr->win, scr->cury, scr->curx, "~");
+
+    wmove(scr->win, scr->cury, scr->curx);
 		wrefresh(scr->win);
 	}
 
@@ -148,6 +231,10 @@ int
 flaghandle(SCR * scr)
 {
 	if (!scr->ygrd[scr->cury].xgrd[scr->curx].flagged) {
+    /*
+     * Decrease the bomb counter
+     */
+    scr->bombc--;
 		mvwprintw(scr->win, scr->cury, scr->curx, "F");
 		wrefresh(scr->win);
 		scr->ygrd[scr->cury].xgrd[scr->curx].flagged = true;

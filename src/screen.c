@@ -33,7 +33,7 @@ drawgrid(SCR * scr)
 		yrand = (int)rand() % GRD_Y;
 		xrand = (int)rand() % GRD_X;
 		scr->ygrd[yrand].xgrd[xrand].bomb = true;
-		/**mvwprintw(scr->win, yrand, xrand, "B");*/
+		/*mvwprintw(scr->win, yrand, xrand, "B");*/
 	}
 
 	if (wrefresh(scr->win) == ERR)
@@ -43,7 +43,13 @@ drawgrid(SCR * scr)
 void
 updategamewin(SCR * scr)
 {
+  mvwprintw(scr->datawin, 1, 1, "%d BOMBS REMAINING", scr->bombc);
 
+  if (wmove(scr->datawin, scr->cury, scr->curx) == ERR)
+    mslog("Failed to move cursor position");
+
+  if (wrefresh(scr->datawin) == ERR)
+    mslog("Failed refresh datawin");
 }
 
 /*
@@ -53,10 +59,11 @@ updategamewin(SCR * scr)
 int
 initgamewin(SCR * scr)
 {
+  scr->gamewy = (scr->maxy / 2) - ((WIN_Y / 2) - 1);
+  scr->gamewx = (scr->maxx / 2) - ((WIN_X / 2) - 36);
+
   if (!(scr->datawin
-      = subwin(scr->win, WIN_Y - 2, WIN_X / 2,
-        (scr->maxy / 2) - ((WIN_Y / 2) - 1),
-        (scr->maxx / 2) - ((WIN_X / 2) - 36)))) {
+      = subwin(scr->win, WIN_Y - 2, WIN_X / 2, scr->gamewy, scr->gamewx))) {
 
     mslog("FATAL:Failed to init datawin");
     return EXIT_FAILURE;
@@ -82,6 +89,9 @@ initgamewin(SCR * scr)
   if (wrefresh(scr->win) == ERR)
     mslog("Failed to refresh win");
 
+  scr->bombc = BOMBS;
+  scr->flagc = 0;
+  scr->seconds = 0;
   return EXIT_SUCCESS;
 }
 
@@ -108,7 +118,7 @@ initcolor(void)
 		if (init_pair(BAK_BOX, COLOR_WHITE, COLOR_RED) == ERR)
 			return EXIT_FAILURE;
 	} else {
-		mslog("SCR does not support color");
+		mslog("Terminal does not support color");
 	}
 
 	return EXIT_SUCCESS;

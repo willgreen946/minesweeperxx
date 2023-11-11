@@ -30,6 +30,8 @@ typedef struct {
 	int maxy;
 	int cury;
 	int curx;
+  int gamewy;
+  int gamewx;
   int flagc;
   int bombc;
   float seconds;
