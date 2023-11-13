@@ -1,7 +1,4 @@
-CC    = gcc
-INCS  = -I/usr/include
-LIBS  = -L/usr/lib
-LINKS = -lc -lcurses
+CC = gcc
 
 WARNINGS = -Wall -Wextra -Wshadow -Wpointer-arith \
 						-Wcast-align -Wwrite-strings -Wmissing-prototypes \
@@ -9,16 +6,20 @@ WARNINGS = -Wall -Wextra -Wshadow -Wpointer-arith \
 						-Winline -Wuninitialized -Wconversion -Wstrict-prototypes \
 						-pedantic
 
-CFLAGS = -std=c99 $(WARNINGS)
+CFLAGS = -std=c99 -O3 $(WARNINGS)
 
-all: EXE 
-	
-EXE: OBJECTS
-	$(CC) $(INCS) $(LIBS) $(LINKS) main.o move.o mslog.o screen.o config.o -o msxx 
+LIBS = -L/usr/lib
+INCS = -I/usr/include/
+LNKS = -lc -lcurses
 
-OBJECTS:
+all:
 	$(CC) $(CFLAGS) src/main.c -c
-	$(CC) $(CFLAGS) src/move.c -c
+	$(CC) $(CFLAGS) src/msxx.c -c
 	$(CC) $(CFLAGS) src/mslog.c -c
-	$(CC) $(CFLAGS) src/screen.c -c
-	$(CC) $(CFLAGS) src/config.c -c
+	$(CC) $(CFLAGS) src/key.c -c
+	$(CC) $(CFLAGS) src/handle.c -c
+	$(CC) $(CFLAGS) src/move.c -c
+	$(CC) $(CFLAGS) src/scr.c -c
+	$(CC) $(CFLAGS) src/grid.c -c
+	$(CC) $(CFLAGS) $(LIBS) $(INCS) $(LNKS) main.o msxx.o handle.o mslog.o scr.o grid.o move.o key.o -o msxx
+  
