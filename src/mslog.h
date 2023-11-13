@@ -4,14 +4,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
 #include <time.h>
+#include <errno.h>
 
-#define MSLOG_PATH "mserrlog.txt"
+#define MSLOG_PATH "mslog.txt"
 
 /*
- * Prints formatted error messages to a text file
+ * Prints formatted error message to text file
  */
-void mslog(const char *str);
+void mslog(const char *);
 
 #endif /* __MSLOG_H__ */
