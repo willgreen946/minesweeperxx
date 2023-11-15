@@ -9,7 +9,8 @@
 
 static int msprinttitle(WINDOW *);
 static void msmainmenu(SCR*);
-static void eventloop(SCR*);
+static void msupdategmwin(SCR *);
+static void mseventloop(SCR*);
 
 /*
  * Prints out a file
@@ -42,6 +43,9 @@ msprinttitle(WINDOW * w)
   return 0;
 }
 
+/*
+ * A simple screen that will show upon death
+ */
 void
 msdeathscr(SCR * s)
 {
@@ -65,6 +69,18 @@ msdeathscr(SCR * s)
     mslog("Failed to refresh (win)");
 
   wgetch(s->win);
+}
+
+/*
+ * Updates the game window with information.
+ * For example the amount of mines remaining
+ */
+static void
+msupdategmwin(SCR * s)
+{
+  /* TODO Causing a memory fault */
+  mvwprintw(s->gmwin, 1, 1, "%d MINES REMAINING",
+    (s->minec - s->flagc));
 }
 
 static void 
@@ -106,14 +122,14 @@ msmainmenu(SCR * s)
     mslog("Failed to show cursor");
 
   if (c == '1')
-    eventloop(s);
+    mseventloop(s);
 }
 
 /*
  * The main loop of the program
  */
 static void
-eventloop(SCR * s)
+mseventloop(SCR * s)
 {
   int c = 0;
 
@@ -137,6 +153,8 @@ eventloop(SCR * s)
   while ((c = wgetch(s->win)) != ESC) {
     if (keyparse(s, c))
       break;
+
+    msupdategmwin(s);
   }
 
   scrdestroygmwin(s->gmwin);

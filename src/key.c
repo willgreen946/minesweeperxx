@@ -30,7 +30,7 @@ keyparse(SCR * s, int c)
       return handlesel(s);
     case SPC:
     case 'f':
-      break;
+      return flaghandle(s);
   }
 
   return 0;

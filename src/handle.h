@@ -7,6 +7,8 @@
 #include "msxx.h"
 #include "config.h"
 
-int handlesel(SCR *);
+int handlesel(SCR*);
+
+int flaghandle(SCR*);
 
 #endif /* __HANDLE_H__ */
