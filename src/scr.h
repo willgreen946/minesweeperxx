@@ -11,6 +11,7 @@ struct XGRID {
   bool mine;
   bool selected;
   bool flagged;
+  int count;
 };
 
 struct YGRID {
