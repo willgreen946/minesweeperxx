@@ -6,7 +6,7 @@ WARNINGS = -Wall -Wextra -Wshadow -Wpointer-arith \
 						-Winline -Wuninitialized -Wconversion -Wstrict-prototypes \
 						-pedantic
 
-CFLAGS = -std=c99 -O3 $(WARNINGS)
+CFLAGS = -std=c99 -g $(WARNINGS)
 
 LIBS = -L/usr/lib
 INCS = -I/usr/include/
@@ -17,9 +17,10 @@ all:
 	$(CC) $(CFLAGS) src/msxx.c -c
 	$(CC) $(CFLAGS) src/mslog.c -c
 	$(CC) $(CFLAGS) src/key.c -c
+	$(CC) $(CFLAGS) src/scan.c -c
 	$(CC) $(CFLAGS) src/handle.c -c
 	$(CC) $(CFLAGS) src/move.c -c
 	$(CC) $(CFLAGS) src/scr.c -c
 	$(CC) $(CFLAGS) src/grid.c -c
-	$(CC) $(CFLAGS) $(LIBS) $(INCS) $(LNKS) main.o msxx.o handle.o mslog.o scr.o grid.o move.o key.o -o msxx
+	$(CC) $(CFLAGS) $(LIBS) $(INCS) $(LNKS) main.o msxx.o handle.o mslog.o scr.o grid.o move.o key.o scan.o -o msxx
   
