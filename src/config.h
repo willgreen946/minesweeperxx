@@ -6,7 +6,12 @@
  */
 enum {
   WIN_BOX = 1,
-  BAK_BOX = 2
+  BAK_BOX = 2,
+  BLU = 3,
+  PUR = 4,
+  RED = 5,
+  YEL = 6,
+  GRE = 7
 };
 
 /*

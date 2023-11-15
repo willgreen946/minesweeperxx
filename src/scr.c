@@ -80,6 +80,21 @@ scrinitcolor(void)
     if (init_pair(BAK_BOX, COLOR_WHITE, COLOR_RED) == ERR)
       mslog("Failed to init color pair (BAK_BOX)");
 
+   if (init_pair(BLU, COLOR_BLACK, COLOR_BLUE) == ERR)
+      mslog("Failed to init color pair (BLU)");
+
+   if (init_pair(PUR, COLOR_MAGENTA, COLOR_BLUE) == ERR)
+      mslog("Failed to init color pair (PUR)");
+
+   if (init_pair(YEL, COLOR_YELLOW, COLOR_BLUE) == ERR)
+      mslog("Failed to init color pair (YEL)");
+
+   if (init_pair(RED, COLOR_RED, COLOR_BLUE) == ERR)
+      mslog("Failed to init color pair (RED)");
+
+   if (init_pair(GRE, COLOR_GREEN, COLOR_BLUE) == ERR)
+      mslog("Failed to init color pair (GRE)");
+
   } else {
     mslog("Terminal does not support color");
   }

@@ -54,7 +54,14 @@ msdeathscr(SCR * s)
 
   mvwprintw(s->gmwin, 1, 1, "YOU DIED!");
   mvwprintw(s->gmwin, 2, 1, "Press any key to continue");
-  mvwprintw(s->win, s->cury, s->curx, "*");
+
+  if (has_colors()) {
+    wattron(s->win, COLOR_PAIR(RED));
+    mvwprintw(s->win, s->cury, s->curx, "*");
+    wattroff(s->win, COLOR_PAIR(RED));
+  } else {
+    mvwprintw(s->win, s->cury, s->curx, "*");
+  }
 
   if (box(s->gmwin, 0, 0) == ERR)
     mslog("Failed to draw box (gmwin)");
