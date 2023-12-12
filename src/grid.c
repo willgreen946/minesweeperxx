@@ -20,7 +20,7 @@ north(struct YGRID * ygrd, int y, int x)
 {
   int n = 0;  
 
-  if ((y - 1) < 0)
+  if ((y - 1) <= 0)
     return 0;
 
   /* Scan directly north */
@@ -35,7 +35,7 @@ northeast(struct YGRID * ygrd, int y, int x)
 {
   int ne = 0; 
 
-  if ((y - 1) < 0 || (x + 1) > GRD_X)
+  if ((y - 1) <= 0 || (x + 1) >= GRD_X)
     return 0;
 
   /* Scan the north east */
@@ -50,7 +50,7 @@ northwest(struct YGRID * ygrd, int y, int x)
 {
   int nw = 0; 
 
-  if ((y - 1) < 0 || (x - 1) < 0)
+  if ((y - 1) <= 0 || (x - 1) <= 0)
     return 0;
 
   /* Scan the north west */
@@ -65,7 +65,7 @@ east(struct YGRID * ygrd, int y, int x)
 {
   int e = 0;  
 
-  if ((x + 1) > GRD_X)
+  if ((x + 1) >= GRD_X)
     return 0;
 
   /* Scan directly east */
@@ -80,7 +80,7 @@ south(struct YGRID * ygrd, int y, int x)
 {
   int s = 0;  
 
-  if ((y + 1) > GRD_Y)
+  if ((y + 1) >= GRD_Y)
     return 0;
 
   /* Scan directly south */
@@ -95,7 +95,7 @@ southeast(struct YGRID * ygrd, int y, int x)
 {
   int se = 0; 
 
-  if ((y + 1) > GRD_Y || (x + 1) > GRD_X)
+  if ((y + 1) >= GRD_Y || (x + 1) >= GRD_X)
     return 0;
 
   /* Scan the south east */
@@ -110,7 +110,7 @@ southwest(struct YGRID * ygrd, int y, int x)
 {
   int sw = 0;
 
-  if ((y + 1) > GRD_Y || (x - 1) < 0)
+  if ((y + 1) >= GRD_Y || (x - 1) <= 0)
     return 0;
 
   /* Scan the south west */
@@ -125,7 +125,7 @@ west(struct YGRID * ygrd, int y, int x)
 {
   int w = 0;  
 
-  if ((x - 1) < 0)
+  if ((x - 1) <= 0)
     return 0;
 
   /* Scan directly west */
