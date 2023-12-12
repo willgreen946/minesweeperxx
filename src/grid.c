@@ -194,5 +194,5 @@ griddraw(SCR * s)
   }
   
   if (wrefresh(s->win) == ERR)
-    mslog("Failed to refresh (win)");
+    mslog(REFRESH, __func__);
 }

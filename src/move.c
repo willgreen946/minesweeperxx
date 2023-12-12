@@ -10,10 +10,10 @@ moveup(WINDOW * w, int * y, int x)
     *y -= 1;
 
   if (wmove(w, *y, x) == ERR)
-    mslog("Failed to move cursor (win)");
+    mslog(REFRESH, __func__);
 
   if (wrefresh(w) == ERR)
-    mslog("Failed to refresh (win)");
+    mslog(REFRESH, __func__);
 }
 
 void
@@ -23,10 +23,10 @@ movedown(WINDOW * w, int * y, int x)
     *y += 1;
 
   if (wmove(w, *y, x) == ERR)
-    mslog("Failed to move cursor (win)");
+    mslog(MOVE, __func__);
 
   if (wrefresh(w) == ERR)
-    mslog("Failed to refresh (win)");
+    mslog(REFRESH, __func__);
 }
 
 void
@@ -36,10 +36,10 @@ moveleft(WINDOW * w, int y, int * x)
     *x -= 1;
 
   if (wmove(w, y, *x) == ERR)
-    mslog("Failed to move cursor (win)");
+    mslog(MOVE, __func__);
 
   if (wrefresh(w) == ERR)
-    mslog("Failed to refresh (win)");
+    mslog(REFRESH, __func__);
 }
 
 void
@@ -49,8 +49,8 @@ moveright(WINDOW * w, int y, int * x)
     *x += 1;
 
   if (wmove(w, y, *x) == ERR)
-    mslog("Failed to move cursor (win)");
+    mslog(MOVE, __func__);
 
   if (wrefresh(w) == ERR)
-    mslog("Failed to refresh (win)");
+    mslog(REFRESH, __func__);
 }

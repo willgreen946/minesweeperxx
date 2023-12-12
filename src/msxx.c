@@ -23,7 +23,7 @@ msprinttitle(WINDOW * w)
   FILE * fp = (FILE*) 0;
 
   if (!(fp = fopen("./assets/title.txt", "r"))) {
-    mslog("Failed to open file ./assets/title.txt");
+		mslog(TITLE, __func__);
     return 1;
   }
 
@@ -31,12 +31,12 @@ msprinttitle(WINDOW * w)
     mvwprintw(w, y, (GRD_X / 10), "%s", buf);
 
   if (fclose(fp)) {
-    mslog("Failed to close file ./assets/title.txt");
+		mslog(TITLE, __func__);
     return 1;
   }
 
   if (wrefresh(w) == ERR) {
-    mslog("Failed to refresh (win)");
+    mslog(REFRESH, __func__);
     return 1;
   }
 
@@ -50,7 +50,7 @@ void
 msdeathscr(SCR * s)
 {
   if (wclear(s->gmwin) == ERR)
-    mslog("Failed to clear (gmwin)");
+    mslog(CLEAR, __func__);
 
   mvwprintw(s->gmwin, 1, 1, "YOU DIED!");
   mvwprintw(s->gmwin, 2, 1, "Press any key to continue");
@@ -64,16 +64,16 @@ msdeathscr(SCR * s)
   }
 
   if (box(s->gmwin, 0, 0) == ERR)
-    mslog("Failed to draw box (gmwin)");
+		mslog(BOX, __func__);
 
   if (wmove(s->win, s->cury, s->curx) == ERR)
-    mslog("Failed to move cursor (win)");
+		mslog(CURSOR, __func__);
 
   if (wrefresh(s->gmwin) == ERR)
-    mslog("Failed to refresh (gmwin)");
+		mslog(REFRESH, __func__);
 
   if (wrefresh(s->win) == ERR)
-    mslog("Failed to refresh (win)");
+		mslog(REFRESH, __func__);
 
   wgetch(s->win);
 }
@@ -88,6 +88,12 @@ msupdategmwin(SCR * s)
   /* TODO Causing a memory fault */
   mvwprintw(s->gmwin, 1, 1, "%d MINES REMAINING",
     (s->minec - s->flagc));
+
+	if (wrefresh(s->gmwin) == ERR)
+		mslog(REFRESH, __func__);
+
+	if (wmove(s->win, s->cury, s->curx) == ERR)
+		mslog(MOVE, __func__);
 }
 
 static void 
@@ -96,15 +102,15 @@ msmainmenu(SCR * s)
   int c = 0;
 
   if (wclear(s->win) == ERR)
-    mslog("Failed to clear (win)");
+		mslog(CLEAR, __func__);
 
   if (curs_set(0) == ERR)
-    mslog("Failed to hide cursor");
+		mslog(HIDE, __func__);
 
   if (has_colors()) {
     /* Set background color for main window */
     if (wbkgd(s->win, COLOR_PAIR(WIN_BOX)))
-      mslog("Failed to set background color (win)");
+			mslog(BACKGROUND, __func__);
   }
 
   if (msprinttitle(s->win)) {
@@ -119,14 +125,14 @@ msmainmenu(SCR * s)
     (WIN_X / 2) - strlen("(2) QUIT"), "(2) QUIT");
 
   if (box(s->win, 0, 0) == ERR)
-    mslog("Failed to draw box (win)");
+		mslog(BOX, __func__);
 
   while ((c = wgetch(s->win)))
     if (c == '1' || c == '2')
       break;
 
   if (curs_set(1) == ERR)
-    mslog("Failed to show cursor");
+		mslog(SHOW, __func__);
 
   if (c == '1')
     mseventloop(s);
@@ -141,7 +147,7 @@ mseventloop(SCR * s)
   int c = 0;
 
   if (wclear(s->win) == ERR)
-    mslog("Failed to clear (win)");
+		mslog(CLEAR, __func__);
 
   if (scrinitgmwin(s))
     return;
@@ -155,7 +161,7 @@ mseventloop(SCR * s)
   s->curx = GRD_X / 2;
   
   if (wmove(s->win, s->cury, s->curx) == ERR)
-    mslog("Failed to move cursor (win)");
+		mslog(MOVE, __func__);
 
   while ((c = wgetch(s->win)) != ESC) {
     if (keyparse(s, c))
@@ -184,13 +190,13 @@ mssetup(void)
    * Apply settings for curses
    */
   if (noecho() == ERR)
-    mslog("Failed to disable echoing");
+		mslog(NOECHO, __func__);
 
   if (raw() == ERR)
-    mslog("Failed to enter rawmode");
+		mslog(RAW, __func__);
 
   if (keypad(s->win, TRUE) == ERR)
-    mslog("Failed to init the keypad");
+		mslog(KEYPAD, __func__);
 
   msmainmenu(s);
 

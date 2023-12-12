@@ -35,15 +35,15 @@ static void
 victoryscr(SCR * s)
 {
   if (wclear(s->gmwin) == ERR)
-    mslog("Failed to clear (gmwin)");
+    mslog(CLEAR, __func__);
 
   if (box(s->gmwin, 0, 0) == ERR)
-    mslog("Failed to draw box (gmwin)");
+    mslog(BOX, __func__);
 
   mvwprintw(s->gmwin, 1, 1, "You Flagged All the Mines");
   
   if (wrefresh(s->gmwin) == ERR)
-    mslog("Failed to refresh (gmwin)");
+    mslog(REFRESH, __func__);
 
   wgetch(s->win);
 }
@@ -61,7 +61,7 @@ flaghandle(SCR * s)
     s->flagc--;
 
     if (wmove(s->win, s->cury, s->curx) == ERR)
-      mslog("Failed to move cursor (win)");
+      mslog(CURSOR, __func__);
 
     return 0;
   }
@@ -81,7 +81,7 @@ flaghandle(SCR * s)
   mvwprintw(s->win, s->cury, s->curx, "F");
 
   if (wmove(s->win, s->cury, s->curx) == ERR)
-    mslog("Failed to move cursor (win)");
+    mslog(MOVE, __func__);
 
   return 0;
 }

@@ -155,5 +155,5 @@ scangrid(SCR * s)
   } 
 
   if (wmove(s->win, s->cury, s->curx) == ERR)
-    mslog("Failed to move cursor (win)");
+    mslog(CURSOR, __func__);
 }

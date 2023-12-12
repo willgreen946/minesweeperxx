@@ -13,43 +13,44 @@ static void scrinitcolor(void);
 int
 scrinitgmwin(SCR * s)
 {
+	/* Get the Center of the screen */
   s->gmwiny = (s->maxy / 2) - ((WIN_Y / 2) - 1);
   s->gmwinx = (s->maxx / 2) - ((WIN_X / 2) - 36);
 
   if (wclear(s->win) == ERR)
-    mslog("Failed to clear (win)");
+    mslog(CLEAR, __func__);
 
   if (!(s->gmwin
     = subwin(s->win, WIN_Y - 2, WIN_X / 2, 
     s->gmwiny, s->gmwinx))) {
-    mslog("[FATAL] Failed to create game window (gmwin)");
+    mslog(NEWWIN, __func__);
     return 1;
   }
 
   if (has_colors()) {
     /* Set background color for main window */
     if (wbkgd(s->win, COLOR_PAIR(WIN_BOX)))
-      mslog("Failed to set background color (win)");
+      mslog(BACKGROUND, __func__);
 
     /* Set background color for game data window */
     if (wbkgd(s->gmwin, COLOR_PAIR(BAK_BOX)))
-      mslog("Failed to set background color (gmwin)");
+      mslog(BACKGROUND, __func__);
   }
 
   if (box(stdscr, 0, 0) == ERR)
-    mslog("Failed to draw box (stdscr)");
+    mslog(BOX, __func__);
 
   if (box(s->gmwin, 0, 0) == ERR)
-    mslog("Failed to draw box (gmwin)");
+    mslog(BOX, __func__);
 
   if (wrefresh(stdscr) == ERR)
-    mslog("Failed to refresh (stdscr)");
+    mslog(REFRESH, __func__);
 
   if (wrefresh(s->win) == ERR)
-    mslog("Failed to refresh (win)");
+    mslog(REFRESH, __func__);
 
   if (wrefresh(s->gmwin) == ERR)
-    mslog("Failed to refresh (gmwin)");
+    mslog(REFRESH, __func__);
 
   s->minec = MINES;
   s->flagc = 0;
@@ -61,7 +62,7 @@ void
 scrdestroygmwin(WINDOW * w)
 {
   if (delwin(w) == ERR)
-    mslog("Failed to destroy (gmwin)");
+    mslog(DESTWIN, __func__);
 }
 
 /*
@@ -72,31 +73,31 @@ scrinitcolor(void)
 {
   if (has_colors()) {
     if (start_color() == ERR)
-      mslog("Failed to init color (start_color)");
+      mslog(INITPAIR, __func__);
 
     if (init_pair(WIN_BOX, COLOR_WHITE, COLOR_BLUE) == ERR)
-      mslog("Failed to init color pair (WIN_BOX)");
+      mslog(INITPAIR, __func__);
 
     if (init_pair(BAK_BOX, COLOR_WHITE, COLOR_RED) == ERR)
-      mslog("Failed to init color pair (BAK_BOX)");
+      mslog(INITPAIR, __func__);
 
    if (init_pair(BLU, COLOR_BLACK, COLOR_BLUE) == ERR)
-      mslog("Failed to init color pair (BLU)");
+      mslog(INITPAIR, __func__);
 
    if (init_pair(PUR, COLOR_MAGENTA, COLOR_BLUE) == ERR)
-      mslog("Failed to init color pair (PUR)");
+      mslog(INITPAIR, __func__);
 
    if (init_pair(YEL, COLOR_YELLOW, COLOR_BLUE) == ERR)
-      mslog("Failed to init color pair (YEL)");
+      mslog(INITPAIR, __func__);
 
    if (init_pair(RED, COLOR_RED, COLOR_BLUE) == ERR)
-      mslog("Failed to init color pair (RED)");
+      mslog(INITPAIR, __func__);
 
    if (init_pair(GRE, COLOR_GREEN, COLOR_BLUE) == ERR)
-      mslog("Failed to init color pair (GRE)");
+      mslog(INITPAIR, __func__);
 
   } else {
-    mslog("Terminal does not support color");
+    mslog(COLOR, __func__);
   }
 }
 
@@ -111,19 +112,24 @@ scrinit(void)
   SCR * s = (SCR*) 0;
 
   if (!(s = (SCR*) malloc(sizeof(*s)))) {
-    mslog("[FATAL] Failed to allocate memory for SCR *");
+    fprintf(stderr,
+			"[FATAL] Failed to allocate memory for SCR *");
     return (SCR*) 0;
   }
 
   if (!(stdscr = initscr())) {
-    mslog("[FATAL] Failed to init curses");
+    fprintf(stderr,
+			"[FATAL] Failed to init curses");
+		mslog(STARTCURSES, __func__);
     return (SCR*) 0;
   }
 
   getmaxyx(stdscr, s->maxy, s->maxx);
 
   if (s->maxy < WIN_Y || s->maxx < WIN_X) {
-    mslog("[FATAL] Window needs to be at least 80x24");
+    fprintf(stderr,
+			"[FATAL] Window needs to be at least %dx%d",
+			WIN_X, WIN_Y);
     return (SCR*) 0;
   }
 
@@ -131,7 +137,7 @@ scrinit(void)
   if (!(s->win
     = newwin(WIN_Y, WIN_X, (s->maxy / 2) - (WIN_Y / 2),
     (s->maxx / 2) - (WIN_X / 2)))) {
-    mslog("[FATAL] Failed to create window (win)");
+    mslog(NEWWIN, __func__);
     return (SCR*) 0;
   }
 
@@ -149,11 +155,9 @@ scrdestroy(SCR * s)
 {
   if (s)
     free(s);
-  else
-    mslog("SCR * is not NULL");
 
   if (endwin() == ERR) {
-    mslog("Failed to end curses");
+    mslog(ENDCURSES, __func__);
     return 1;
   }
 
